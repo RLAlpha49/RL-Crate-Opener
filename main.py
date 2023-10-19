@@ -63,11 +63,52 @@ def update_items(category, item):
 
     with open(items_file_path, "w") as configfile:
         items.write(configfile)
+        
+def calculate_probabilities():
+    categories = load_items()
+    
+    for category in categories.sections():
+        print(f'Category: {category}')
+        total_items = sum([int(count) for count in categories[category].values()])
+        
+        rarities = {
+            "Uncommon": 0,
+            "Rare": 0,
+            "Very Rare": 0,
+            "Import": 0,
+            "Exotic": 0,
+            "Black Market": 0
+        }
+        
+        for item, count in categories[category].items():
+            rarity = get_rarity(item)  # Function to extract rarity from item name
+            rarities[rarity] += int(count)
+        
+        for rarity, count in rarities.items():
+            probability = count / total_items
+            print(f'{rarity}: {probability * 100:.2f}%')
+        
+        print()
+
+# Example function to extract rarity from an item name
+def get_rarity(item):
+    rarities = ["Uncommon", "Rare", "Very Rare", "Import", "Exotic", "Black Market"]
+    for rarity in rarities:
+        if rarity.lower() in item.lower():
+            return rarity
+    return "Unknown"  # If rarity is not recognized
 
 
 
 if __name__ == "__main__":
-    input("Press enter to start")
+    user_input = 0
+    while user_input != 1:
+        print("1: Open Drops\n2: Calulate Probabilities")
+        user_input = int(input())
+        print(user_input)
+        if int(user_input) == 2:
+            calculate_probabilities()
+    
     time.sleep(0.1)
     time.sleep(4)
     
@@ -100,9 +141,7 @@ if __name__ == "__main__":
         pyautogui.leftClick(window.left + 100, window.top + 280)
         time.sleep(1)
 
-        i = 0
-        while pixel_search_in_window((0, 2, 3), 70, 71, 920, 921, shade=0) and i < 2:
-            i += 1
+        while pixel_search_in_window((0, 2, 3), 70, 71, 920, 921, shade=0):
             pyautogui.leftClick(window.left + 165, window.top + 910)
             time.sleep(0.1)
             pyautogui.leftClick(window.left + 850, window.top + 610)
