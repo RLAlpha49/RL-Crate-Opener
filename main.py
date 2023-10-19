@@ -9,11 +9,6 @@ import pygetwindow as gw
 from configparser import ConfigParser
 from PIL import ImageGrab
 
-# Initialize a dictionary to store the categories and counts
-categories = {}
-current_category = None
-categories_config = ConfigParser()
-
 def get_RL_window():
     # Find the Rocket League window by its title
     window = gw.getWindowsWithTitle("Rocket League")[0]
@@ -26,10 +21,6 @@ def pixel_search_in_window(color, left, right, top, bottom, shade=None):
     for x in range(left, right):
         for y in range(top, bottom):
             pixel_color = screenshot.getpixel((x, y))
-            # Used to find different pixel rgb values within a certain area. I use this for finding out what rgb values to search for in the script.
-            if color == (0, 0, 0):
-                print(f"Pixel at ({x}, {y}) - Color: {pixel_color}")
-            
             if color_match(pixel_color, color, shade):
                 return x, y
     return None
@@ -105,26 +96,22 @@ if __name__ == "__main__":
     while user_input != 1:
         print("1: Open Drops\n2: Calulate Probabilities")
         user_input = int(input())
-        print(user_input)
         if int(user_input) == 2:
             calculate_probabilities()
     
-    time.sleep(0.1)
-    time.sleep(4)
+    time.sleep(1)
+
     
     # Register a hotkey (Ctrl + C) to save the results and exit the program
     keyboard.add_hotkey('ctrl+c', lambda: exit(0))
 
-    categories = {}  # Dictionary to temporarily store the categories and items
-
-    if not pixel_search_in_window((38, 62, 107), 100, 100, 280, 281, shade=0):
+    while not pixel_search_in_window((38, 62, 107), 100, 100, 280, 281, shade=0):
         window = get_RL_window()
-        print("Drop found")
+        print("\nDrop found\n")
 
         image = ImageGrab.grab(bbox=(window.left + 40, window.top + 335, window.left + 160, window.top + 350))
         text = pytesseract.image_to_string(image)
-        print(text)
-
+        
         # Split the extracted text into lines
         lines = text.split('\n')
 
@@ -149,7 +136,6 @@ if __name__ == "__main__":
 
             image = ImageGrab.grab(bbox=(window.left + 725, window.top + 200, window.left + 1195, window.top + 240))
             text = pytesseract.image_to_string(image)
-            print(text)
 
             # Split the extracted text into lines
             lines = text.split('\n')
@@ -161,11 +147,13 @@ if __name__ == "__main__":
 
                 # If the line is not empty, set it as the current category
                 if line:
+                    print(f"Opened {line}\n")
                     update_items(current_category, line)
+                    
 
             pyautogui.leftClick(window.left + 1050, window.top + 990)
             time.sleep(0.5)
-        print("No more Drop's left checking for more")
+        print("\nNo more Drop's left checking for more\n")
         pyautogui.leftClick(window.left + 130, window.top + 1030)
         time.sleep(0.5)
 
