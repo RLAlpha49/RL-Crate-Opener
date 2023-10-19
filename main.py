@@ -59,7 +59,7 @@ def update_items(category, item):
     if items.has_option(category, item):
         items.set(str(category), str(item), str(int(items.get(str(category), str(item))) + 1))
     else:
-        items.set(category, string.capwords(item), "1")
+        items.set(category, str(item), "1")
 
     with open(items_file_path, "w") as configfile:
         items.write(configfile)
@@ -80,7 +80,7 @@ if __name__ == "__main__":
         window = get_RL_window()
         print("Drop found")
 
-        image = ImageGrab.grab(bbox=(window.left + 55, window.top + 335, window.left + 140, window.top + 350))
+        image = ImageGrab.grab(bbox=(window.left + 40, window.top + 335, window.left + 160, window.top + 350))
         text = pytesseract.image_to_string(image)
         print(text)
 
