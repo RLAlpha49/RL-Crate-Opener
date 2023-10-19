@@ -1,0 +1,13 @@
+[Rare Drop]
+rare player banner = 2
+very rare wheels = 1
+import rocket boost = 1
+rare wheels = 1
+import animated decal = 1
+rare decal = 1
+rare rocket boost = 2
+
+[ncommon Di]
+uncommon rocket boost = 1
+uncommon player banner = 1
+

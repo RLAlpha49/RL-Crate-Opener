@@ -2,6 +2,9 @@ import pyautogui
 import pytesseract
 import time
 import keyboard
+import os
+import sys
+import string
 import pygetwindow as gw
 from configparser import ConfigParser
 from PIL import ImageGrab
@@ -36,18 +39,40 @@ def color_match(actual_color, target_color, shade):
         if abs(actual_color[i] - target_color[i]) > shade:
             return False
     return True
+        
+base_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+items_file_path = os.path.join(base_dir, "items.txt")
 
-# Function to save categorized items to a ConfigParser object
-def save_to_config():
-    for category, items in categories.items():
-        categories_config[category] = items
+def load_items():
+    items = ConfigParser()
+    items.read(items_file_path)
+    return items
+
+def update_items(category, item):
+    items = load_items()
+
+    # Ensure the category exists
+    if not items.has_section(category):
+        items.add_section(category)
+
+    # Ensure the item exists within the category
+    if items.has_option(category, item):
+        items.set(str(category), str(item), str(int(items.get(str(category), str(item))) + 1))
+    else:
+        items.set(category, string.capwords(item), "1")
+
+    with open(items_file_path, "w") as configfile:
+        items.write(configfile)
+
+
 
 if __name__ == "__main__":
     input("Press enter to start")
     time.sleep(0.1)
+    time.sleep(4)
     
     # Register a hotkey (Ctrl + C) to save the results and exit the program
-    keyboard.add_hotkey('ctrl+c', lambda: save_to_config() or exit(0))
+    keyboard.add_hotkey('ctrl+c', lambda: exit(0))
 
     categories = {}  # Dictionary to temporarily store the categories and items
 
@@ -71,21 +96,12 @@ if __name__ == "__main__":
             # If the line is not empty, set it as the current category
             if line:
                 current_category = line
-                categories.setdefault(current_category, {})
-            else:
-                # If there's no text on this line, it's an item under the current category
-                if current_category and current_category != "Drops":
-                    # Check if the item already exists in the dictionary
-                    if line in categories[current_category]:
-                        categories[current_category][line] += 1
-                    else:
-                        categories[current_category][line] = 1
 
         pyautogui.leftClick(window.left + 100, window.top + 280)
         time.sleep(1)
 
         i = 0
-        while pixel_search_in_window((0, 2, 3), 70, 71, 920, 921, shade=0) and i < 3:
+        while pixel_search_in_window((0, 2, 3), 70, 71, 920, 921, shade=0) and i < 2:
             i += 1
             pyautogui.leftClick(window.left + 165, window.top + 910)
             time.sleep(0.1)
@@ -100,23 +116,13 @@ if __name__ == "__main__":
             lines = text.split('\n')
 
             # Loop through the lines and categorize items
-            current_category = None
             for line in lines:
                 # Remove any leading/trailing whitespace
                 line = line.strip()
 
                 # If the line is not empty, set it as the current category
                 if line:
-                    current_category = line
-                    categories.setdefault(current_category, {})
-                else:
-                    # If there's no text on this line, it's an item under the current category
-                    if current_category and current_category != "Drops":
-                        # Check if the item already exists in the dictionary
-                        if line in categories[current_category]:
-                            categories[current_category][line] += 1
-                        else:
-                            categories[current_category][line] = 1
+                    update_items(current_category, line)
 
             pyautogui.leftClick(window.left + 1050, window.top + 990)
             time.sleep(0.5)
@@ -127,14 +133,5 @@ if __name__ == "__main__":
     # Remove the hotkey when the program is exiting
     keyboard.unhook_all()
 
-    # Save the categorized items to a ConfigParser object
-    save_to_config()
-
-    # Write the ConfigParser object to a file
-    with open('item_counts.ini', 'w') as configfile:
-        categories_config.write(configfile)
-
     # Close the program gracefully
     exit(0)
-
-    # pixel_search_in_window((0,0,0),100,500,280,281,shade=0)
