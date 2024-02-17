@@ -27,19 +27,54 @@ CUSTOM_CONFIG = (
     r"-c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789- "
 )
 
+# Define constants for magic numbers
+DROP_CHECK_COORDS = (100, 100, 280, 281)
+DROP_FOUND_COORDS = (40, 320, 160, 350)
+ITEM_OPEN_COORDS = (725, 200, 1195, 240)
+
+
+def grab_image(window, coords):
+    """Grab an image from the specified window and coordinates."""
+    return ImageGrab.grab(
+        bbox=(
+            window.left + coords[0],
+            window.top + coords[1],
+            window.left + coords[2],
+            window.top + coords[3],
+        )
+    )
+
+
+def extract_text(img):
+    """Extract text from the specified image."""
+    return (
+        pytesseract.image_to_string(img, config=CUSTOM_CONFIG, lang="eng")
+        .strip()
+        .lower()
+    )
+
+
+def handle_user_input():
+    """Handle user input and return the selected option."""
+    while True:
+        print("1: Open Drops\n2: Calculate Probabilities\n3: Close")
+        try:
+            selected_option = int(input())
+            if selected_option in [1, 2, 3]:
+                return selected_option
+        except ValueError:
+            pass
+        print("Invalid input. Please enter 1, 2, or 3.")
+
 
 if __name__ == "__main__":
     while True:
-        USER_INPUT = 0
-        while USER_INPUT != 1:
-            print("1: Open Drops\n2: Calulate Probabilities\n3: Close")
-            USER_INPUT = int(input())
-            if int(USER_INPUT) == 2:
-                sort_text_file()
-                calculate_probabilities()
-            elif int(USER_INPUT) == 3:
-                break
-        if int(USER_INPUT) == 3:
+        user_input = handle_user_input()
+        if user_input == 2:
+            sort_text_file()
+            calculate_probabilities()
+            continue
+        if user_input == 3:
             break
 
         time.sleep(1)
@@ -48,20 +83,13 @@ if __name__ == "__main__":
         keyboard.add_hotkey("ctrl+c", lambda: sys.exit(0))
 
         # Checks for a drop in menu
-        while not pixel_search_in_window((38, 62, 107), (100, 100, 280, 281), shade=0):
-            window = get_rl_window()
+        while not pixel_search_in_window((38, 62, 107), DROP_CHECK_COORDS, shade=0):
+            WINDOW = get_rl_window()
 
-            image = ImageGrab.grab(
-                bbox=(
-                    window.left + 30,
-                    window.top + 130,
-                    window.left + 450,
-                    window.top + 190,
-                )
-            )
-            TEXT = pytesseract.image_to_string(image, config=CUSTOM_CONFIG, lang="eng")
+            image = grab_image(WINDOW, (30, 130, 450, 190))
+            text = extract_text(image)
 
-            TEXT = (str(TEXT).strip()).lower()
+            TEXT = (str(text).strip()).lower()
 
             if TEXT != "rewarditems":
                 print("No Drops Left")
@@ -69,20 +97,13 @@ if __name__ == "__main__":
 
             print("\nDrop found\n")
 
-            image = ImageGrab.grab(
-                bbox=(
-                    window.left + 40,
-                    window.top + 320,
-                    window.left + 160,
-                    window.top + 350,
-                )
-            )
-            # text = pytesseract.image_to_string(image)
-            TEXT = pytesseract.image_to_string(image, config=CUSTOM_CONFIG, lang="eng")
-            print((str(TEXT).lower()).title())
+            image = grab_image(WINDOW, DROP_FOUND_COORDS)
+            text = extract_text(image)
+
+            print((str(text).lower()).title())
 
             # Split the extracted text into lines
-            lines = TEXT.split("\n")
+            lines = text.split("\n")
 
             # Loop through the lines and categorize items
             CURRENT_CATEGORY = None
@@ -94,27 +115,20 @@ if __name__ == "__main__":
                 if line:
                     CURRENT_CATEGORY = line
 
-            pyautogui.leftClick(window.left + 100, window.top + 280)
+            pyautogui.leftClick(WINDOW.left + 100, WINDOW.top + 280)
             time.sleep(1)
 
             while pixel_search_in_window((0, 2, 3), (70, 71, 920, 921), shade=0):
-                pyautogui.leftClick(window.left + 165, window.top + 910)
+                pyautogui.leftClick(WINDOW.left + 165, WINDOW.top + 910)
                 time.sleep(0.1)
-                pyautogui.leftClick(window.left + 850, window.top + 610)
+                pyautogui.leftClick(WINDOW.left + 850, WINDOW.top + 610)
                 time.sleep(8)
 
-                image = ImageGrab.grab(
-                    bbox=(
-                        window.left + 725,
-                        window.top + 200,
-                        window.left + 1195,
-                        window.top + 240,
-                    )
-                )
-                TEXT = pytesseract.image_to_string(image)
+                image = grab_image(WINDOW, ITEM_OPEN_COORDS)
+                text = extract_text(image)
 
                 # Split the extracted text into lines
-                lines = TEXT.split("\n")
+                lines = text.split("\n")
 
                 # Loop through the lines and categorize items
                 for line in lines:
@@ -126,11 +140,11 @@ if __name__ == "__main__":
                         print(f"Opened {(str(line).lower()).title()}\n")
                         update_items(CURRENT_CATEGORY, line)
 
-                pyautogui.leftClick(window.left + 1050, window.top + 990)
+                pyautogui.leftClick(WINDOW.left + 1050, WINDOW.top + 990)
                 time.sleep(0.5)
             print("\nNo more Drop's left checking for more\n")
             sort_text_file()
-            pyautogui.leftClick(window.left + 130, window.top + 1030)
+            pyautogui.leftClick(WINDOW.left + 130, WINDOW.top + 1030)
             time.sleep(0.5)
 
     # Remove the hotkey when the program is exiting

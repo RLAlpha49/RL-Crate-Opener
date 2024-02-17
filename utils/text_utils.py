@@ -8,6 +8,9 @@ Functions:
 
 import re
 
+# Compile the regular expression for cleaning text
+CLEAN_TEXT_REGEX = re.compile(r"[^a-zA-Z0-9\s]")
+
 
 def clean_text(text):
     """
@@ -19,8 +22,8 @@ def clean_text(text):
     Returns:
         str: The cleaned text.
     """
-    # Use a regular expression to keep only alphanumeric characters and spaces
-    cleaned_text = re.sub(r"[^a-zA-Z0-9\s]", "", text)
+    # Use the compiled regular expression to clean the text
+    cleaned_text = CLEAN_TEXT_REGEX.sub("", text)
     return cleaned_text
 
 
@@ -34,8 +37,9 @@ def get_rarity(item):
     Returns:
         str: The rarity of the item. If the rarity is not recognized, returns "Unknown".
     """
-    rarities = ["Uncommon", "Very Rare", "Rare", "Import", "Exotic", "Black Market"]
+    rarities = {"Uncommon", "Very Rare", "Rare", "Import", "Exotic", "Black Market"}
+    item_no_spaces = item.replace(" ", "").lower()
     for rarity in rarities:
-        if rarity.lower() in item.lower():
+        if rarity.replace(" ", "").lower() in item_no_spaces:
             return rarity
     return "Unknown"  # If rarity is not recognized

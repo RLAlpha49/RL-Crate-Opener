@@ -26,9 +26,8 @@ def pixel_search_in_window(color, area, shade=None):
     """
     left, right, top, bottom = area
     window = get_rl_window()
-    screenshot = ImageGrab.grab(
-        bbox=(window.left, window.top, window.left + 1920, window.top + 1080)
-    )
+    bbox = (window.left, window.top, window.left + window.width, window.top + window.height)
+    screenshot = ImageGrab.grab(bbox=bbox)
 
     for x in range(left, right):
         for y in range(top, bottom):
@@ -50,7 +49,4 @@ def color_match(actual_color, target_color, shade):
     Returns:
         bool: True if the colors match within the shade tolerance, False otherwise.
     """
-    for i in range(3):
-        if abs(actual_color[i] - target_color[i]) > shade:
-            return False
-    return True
+    return all(abs(a - t) <= shade for a, t in zip(actual_color, target_color))

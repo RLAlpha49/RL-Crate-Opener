@@ -152,7 +152,14 @@ def custom_sort(item):
         tuple: A tuple containing the index of the item's rarity in the
         rarities list and the length of the item.
     """
-    rarities = ["Uncommon", "Rare", "Very Rare", "Import", "Exotic", "Black Market"]
+    rarities = {
+        "Uncommon": 0,
+        "Rare": 1,
+        "Very Rare": 2,
+        "Import": 3,
+        "Exotic": 4,
+        "Black Market": 5,
+    }
     rarity = get_rarity(item)
-    rarity_index = rarities.index(rarity) if rarity in rarities else len(rarities)
+    rarity_index = rarities.get(rarity, len(rarities))
     return rarity_index, len(item)
