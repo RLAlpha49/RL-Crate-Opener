@@ -17,7 +17,6 @@ from configparser import ConfigParser
 
 from utils.text_utils import clean_text, get_rarity  # pylint: disable=E0401
 
-
 # Gets directory of program
 base_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
 items_file_path = os.path.join(base_dir, "items.txt")

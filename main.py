@@ -9,15 +9,15 @@ Functions:
     main: The main function of the script.
 """
 
-import time
 import sys
+import time
 
 import keyboard
 import pyautogui
 import pytesseract
 from PIL import ImageGrab
 
-from data.items import update_items, calculate_probabilities, sort_text_file
+from data.items import calculate_probabilities, sort_text_file, update_items
 from utils.image_utils import pixel_search_in_window
 from utils.window_utils import get_rl_window
 

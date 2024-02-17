@@ -7,7 +7,6 @@ Functions:
 """
 
 from PIL import ImageGrab
-
 from utils.window_utils import get_rl_window  # pylint: disable=E0401
 
 
@@ -26,7 +25,12 @@ def pixel_search_in_window(color, area, shade=None):
     """
     left, right, top, bottom = area
     window = get_rl_window()
-    bbox = (window.left, window.top, window.left + window.width, window.top + window.height)
+    bbox = (
+        window.left,
+        window.top,
+        window.left + window.width,
+        window.top + window.height,
+    )
     screenshot = ImageGrab.grab(bbox=bbox)
 
     for x in range(left, right):
