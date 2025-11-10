@@ -1,154 +1,159 @@
 """
-This is the main module for the Rocket League item drop automation script.
+Rocket League Drop Opener - Main Application
 
-This script automates the process of opening item drops in Rocket League. It uses image recognition
-to detect item drops and categorize the items obtained from them. The results are then saved and
-probabilities are calculated.
+This script automates opening item drops in Rocket League using image recognition
+and OCR to detect and categorize items.
 
-Functions:
-    main: The main function of the script.
+Author: Rewritten with modern Python practices
+License: MIT License
 """
 
 import sys
-import time
+from datetime import datetime
+from pathlib import Path
+from typing import Optional
 
-import keyboard
-import pyautogui
-import pytesseract
-from PIL import ImageGrab
-
-from data.items import calculate_probabilities, sort_text_file, update_items
-from utils.image_utils import pixel_search_in_window
-from utils.window_utils import get_rl_window
-
-# Config for Tesseract-OCR to extract text more accurately
-CUSTOM_CONFIG = (
-    r"--oem 3 --psm 6 "
-    r"-c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789- "
-)
-
-# Define constants for magic numbers
-DROP_CHECK_COORDS = (100, 100, 280, 281)
-DROP_FOUND_COORDS = (40, 320, 160, 350)
-ITEM_OPEN_COORDS = (725, 200, 1195, 240)
+from src.settings_manager import SettingsManager
+from src.core.drop_opener import DropOpener
+from src.data.items import item_manager
+from src.utils.logger import logger, configure_logger
+from src.config import CONFIG  # pylint: disable=wrong-import-order
 
 
-def grab_image(window, coords):
-    """Grab an image from the specified window and coordinates."""
-    return ImageGrab.grab(
-        bbox=(
-            window.left + coords[0],
-            window.top + coords[1],
-            window.left + coords[2],
-            window.top + coords[3],
-        )
-    )
+def show_menu() -> int:
+    """
+    Display the main menu and get user choice.
+
+    Menu options:
+    1. Open Drops: Start automation with Ctrl+C or ESC key to stop
+    2. Run Calibration: Verify screen regions and colors are correctly detected
+    3. Calculate Probabilities: Sort items and display drop probability statistics
+    4. Exit: Close the application
+
+    Returns:
+        User's menu choice (1-4)
+    """
+    try:
+        while True:
+            print("\n" + "=" * 50)
+            print("Rocket League Drop Opener")
+            print("=" * 50 + "\n")
+            print("1. Open Drops (Ctrl+C or ESC to stop)")
+            print("2. Run Calibration")
+            print("3. Calculate Probabilities")
+            print("4. Exit\n")
+
+            choice = input("Choice: ").strip()
+
+            # Handle empty input
+            if not choice:
+                print("Invalid input. Please enter a number (1-4).")
+                continue
+
+            try:
+                choice_num = int(choice)
+                if 1 <= choice_num <= 4:
+                    return choice_num
+                print("Invalid choice. Please enter 1, 2, 3, or 4.")
+            except ValueError:
+                print("Invalid input. Please enter a number (1-4).")
+    except KeyboardInterrupt:
+        print("\n")
+        return 4  # Exit on Ctrl+C
+    except EOFError:
+        print()
+        return 4  # Exit on EOF
 
 
-def extract_text(img):
-    """Extract text from the specified image."""
-    return (
-        pytesseract.image_to_string(img, config=CUSTOM_CONFIG, lang="eng")
-        .strip()
-        .lower()
-    )
+def main() -> int:
+    """Main application entry point."""
+    import importlib  # pylint: disable=import-outside-toplevel
 
+    # Load persistent settings BEFORE using CONFIG
+    # Settings must be applied as environment variables first
+    SettingsManager.load_and_apply()
 
-def handle_user_input():
-    """Handle user input and return the selected option."""
-    while True:
-        print("1: Open Drops\n2: Calculate Probabilities\n3: Close")
+    # Reload config module to pick up environment variables from settings
+    import src.config  # pylint: disable=import-outside-toplevel
+
+    importlib.reload(src.config)
+
+    # Configure global file logging if RL_LOG_FILE is set
+    if CONFIG.LOG_FILE:
+        configure_logger(log_file=Path(CONFIG.LOG_FILE))
+
+    logger.info("Application started")
+
+    # DropOpener will be instantiated when needed (after menu choice)
+    opener: Optional[DropOpener] = None
+    # Track the current log file path for error reporting
+    current_log_file: Optional[Path] = None
+
+    try:
+        while True:
+            choice = show_menu()
+
+            if choice == 1:
+                # Create DropOpener on first use, reuse for subsequent runs
+                if opener is None:
+                    opener = DropOpener()
+
+                # Open drops - enable file logging if configured
+                if CONFIG.LOG_TO_FILE:
+                    log_dir = Path(CONFIG.DEBUG_DIR) / "logs"
+                    log_dir.mkdir(parents=True, exist_ok=True)
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    log_file = log_dir / f"automation_{timestamp}.log"
+                    current_log_file = log_file
+                    # Reconfigure logger with file output (updates existing instance)
+                    configure_logger(log_file=log_file)
+
+                opener.run_automation()
+
+            elif choice == 2:
+                # Create DropOpener on first use, reuse for subsequent runs
+                if opener is None:
+                    opener = DropOpener()
+
+                # Run calibration
+                opener.run_calibration()
+
+            elif choice == 3:
+                # Calculate probabilities
+                print("\n" + "=" * 50)
+                print("Item Drop Probabilities")
+                print("=" * 50)
+                item_manager.sort_items()
+                item_manager.print_probabilities()
+
+            elif choice == 4:
+                # Exit
+                print("\nExiting...")
+                break
+
+    except KeyboardInterrupt:
+        print("\n\nInterrupted by user")
+        return 130  # Standard exit code for SIGINT (Ctrl+C)
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        logger.exception("Fatal error in main loop")
+        print(f"\nFatal error: {e}")
+        # If file logging is enabled, provide a hint about the log file
+        if CONFIG.LOG_TO_FILE and current_log_file:
+            print(f"Check the log file for more details: {current_log_file}")
+        return 1
+    finally:
+        # Final safety cleanup: ensure all keyboard hooks are unregistered
+        # This prevents hooks from persisting if future code paths add them outside context managers
         try:
-            selected_option = int(input())
-            if selected_option in [1, 2, 3]:
-                return selected_option
-        except ValueError:
-            pass
-        print("Invalid input. Please enter 1, 2, or 3.")
+            import keyboard  # pylint: disable=import-outside-toplevel
+
+            keyboard.unhook_all()
+        except Exception:  # pylint: disable=broad-exception-caught
+            pass  # Silently ignore cleanup errors
+        logger.info("Application shutdown")
+
+    return 0
 
 
 if __name__ == "__main__":
-    while True:
-        user_input = handle_user_input()
-        if user_input == 2:
-            sort_text_file()
-            calculate_probabilities()
-            continue
-        if user_input == 3:
-            break
-
-        time.sleep(1)
-
-        # Register a hotkey (Ctrl + C) to save the results and exit the program
-        keyboard.add_hotkey("ctrl+c", lambda: sys.exit(0))
-
-        # Checks for a drop in menu
-        while not pixel_search_in_window((38, 62, 107), DROP_CHECK_COORDS, shade=0):
-            WINDOW = get_rl_window()
-
-            image = grab_image(WINDOW, (30, 130, 450, 190))
-            text = extract_text(image)
-
-            TEXT = (str(text).strip()).lower()
-
-            if TEXT != "rewarditems":
-                print("No Drops Left")
-                break
-
-            print("\nDrop found\n")
-
-            image = grab_image(WINDOW, DROP_FOUND_COORDS)
-            text = extract_text(image)
-
-            print((str(text).lower()).title())
-
-            # Split the extracted text into lines
-            lines = text.split("\n")
-
-            # Loop through the lines and categorize items
-            CURRENT_CATEGORY = None
-            for line in lines:
-                # Remove any leading/trailing whitespace
-                line = line.strip()
-
-                # If the line is not empty, set it as the current category
-                if line:
-                    CURRENT_CATEGORY = line
-
-            pyautogui.leftClick(WINDOW.left + 100, WINDOW.top + 280)
-            time.sleep(1)
-
-            while pixel_search_in_window((0, 2, 3), (70, 71, 920, 921), shade=0):
-                pyautogui.leftClick(WINDOW.left + 165, WINDOW.top + 910)
-                time.sleep(0.1)
-                pyautogui.leftClick(WINDOW.left + 850, WINDOW.top + 610)
-                time.sleep(8)
-
-                image = grab_image(WINDOW, ITEM_OPEN_COORDS)
-                text = extract_text(image)
-
-                # Split the extracted text into lines
-                lines = text.split("\n")
-
-                # Loop through the lines and categorize items
-                for line in lines:
-                    # Remove any leading/trailing whitespace
-                    line = line.strip()
-
-                    # If the line is not empty, set it as the current category
-                    if line:
-                        print(f"Opened {(str(line).lower()).title()}\n")
-                        update_items(CURRENT_CATEGORY, line)
-
-                pyautogui.leftClick(WINDOW.left + 1050, WINDOW.top + 990)
-                time.sleep(0.5)
-            print("\nNo more Drop's left checking for more\n")
-            sort_text_file()
-            pyautogui.leftClick(WINDOW.left + 130, WINDOW.top + 1030)
-            time.sleep(0.5)
-
-    # Remove the hotkey when the program is exiting
-    keyboard.unhook_all()
-
-    # Close the program gracefully
-    sys.exit(0)
+    sys.exit(main())

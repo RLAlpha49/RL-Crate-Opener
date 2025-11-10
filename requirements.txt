@@ -1,5 +1,7 @@
-keyboard
-pyautogui
-pytesseract
-Pillow
-pygetwindow
+keyboard>=0.13.5
+pyautogui>=0.9.54
+pytesseract>=0.3.13
+Pillow>=12.0.0
+pygetwindow>=0.0.9
+numpy>=2.3.4
+PyQt6>=6.6.0

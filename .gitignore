@@ -1,2 +1,5 @@
 items.txt
+settings.json
 __pycache__/
+debug_images/
+*.ps1
